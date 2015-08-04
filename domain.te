@@ -305,12 +305,22 @@ neverallow domain { cache_file cache_backup_file }:file execute;
 neverallow {
   domain
   -untrusted_app
+  -untrusted_app_nx_file
   -shell
 } {
   data_file_type
   -dalvikcache_data_file
   -system_data_file # shared libs in apks
   -apk_data_file
+}:file no_x_file_perms;
+
+neverallow untrusted_app_nx_file {
+  app_data_file
+  data_file_type
+  -dalvikcache_data_file
+  -system_data_file # shared libs in apks
+  -apk_data_file
+  -asec_public_file
 }:file no_x_file_perms;
 
 # Only the init property service should write to /data/property.

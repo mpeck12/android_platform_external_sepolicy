@@ -1,0 +1,40 @@
+###
+### Untrusted apps nx file.
+###
+### This file defines the rules for untrusted apps with no execute
+### allowed on app data files. Based on untrusted apps permissions.
+### In current AOSP, the untrusted app domain is assigned to all
+### non-system apps as well as to any system apps that are not signed
+### that are not signed by the platform key.  To move
+### a system app into a specific domain, add a signer entry for it to
+### mac_permissions.xml and assign it one of the pre-existing seinfo values
+### or define and use a new seinfo value in both mac_permissions.xml and
+### seapp_contexts. Uses the untrusted_app_allow_rules and
+### untrusted_app_neverallow_rules macros defined in te_macros.te.
+###
+### untrusted_app_nx_file includes all the untrusted app rules, plus the
+### additional following rules:
+###
+
+type untrusted_app_nx_file, domain;
+app_domain(untrusted_app_nx_file)
+net_domain(untrusted_app_nx_file)
+bluetooth_domain(untrusted_app_nx_file)
+
+# Allow the allocation and use of ptys
+# Used by: https://play.google.com/store/apps/details?id=jackpal.androidterm
+create_pty(untrusted_app_nx_file)
+
+untrusted_app_allow_rules(untrusted_app_nx_file)
+
+# Allow GMS core to access perfprofd output, which is stored
+# in /data/misc/perfprofd/. GMS core will need to list all
+# data stored in that directory to process them one by one.
+userdebug_or_eng(`
+  allow untrusted_app_nx_file perfprofd_data_file:file r_file_perms;
+  allow untrusted_app_nx_file perfprofd_data_file:dir r_dir_perms;
+')
+###
+### neverallow rules
+###
+untrusted_app_neverallow_rules(untrusted_app_nx_file)
