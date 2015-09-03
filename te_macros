@@ -357,3 +357,126 @@ define(`use_drmservice', `
 # print(`args')
 define(`print', `errprint(`m4: '__file__: __line__`: $*
 ')')
+
+#####################################
+# untrusted_app_allow_rules(domain)
+# Allow rules for untrusted app
+# modifying execute permissions
+# based on parameter
+define(`untrusted_app_allow_rules', `
+  # Some apps ship with shared libraries and binaries that they write out
+  # to their sandbox directory and then execute.
+  ifelse($1,`untrusted_app_nx',
+    `allow $1 app_data_file:file { r_file_perms };',
+    `allow $1 app_data_file:file { rx_file_perms execmod };'
+  )
+
+  allow $1 tun_device:chr_file rw_file_perms;
+
+  # ASEC
+  allow $1 asec_apk_file:file r_file_perms;
+  # Execute libs in asec containers.
+  allow $1 asec_public_file:file { execute execmod };
+
+  # Used by Finsky / Android "Verify Apps" functionality when
+  # running "adb install foo.apk".
+  # TODO: Long term, we don't want apps probing into shell data files.
+  # Figure out a way to remove these rules.
+  allow $1 shell_data_file:file r_file_perms;
+  allow $1 shell_data_file:dir r_dir_perms;
+
+  # b/18504118: Allow reads from /data/anr/traces.txt
+  # TODO: We shouldn't be allowing all untrusted_apps to read
+  # this file. This is only needed for the GMS feedback agent.
+  # See also b/18340553. GMS runs as untrusted_app, and
+  # it's too late to change the domain it runs in.
+  # This line needs to be deleted.
+  allow $1 anr_data_file:file r_file_perms;
+
+  # Read and write system app data files passed over Binder.
+  # Motivating case was /data/data/com.android.settings/cache/*.jpg for
+  # cropping or taking user photos.
+  allow $1 system_app_data_file:file { read write getattr };
+
+  #
+  # Rules migrated from old app domains coalesced into untrusted_app.
+  # This includes what used to be media_app, shared_app, and release_app.
+  #
+
+  # Access /dev/mtp_usb.
+  allow $1 mtp_device:chr_file rw_file_perms;
+
+  # Access to /data/media.
+  allow $1 media_rw_data_file:dir create_dir_perms;
+  allow $1 media_rw_data_file:file create_file_perms;
+
+  # Write to /cache.
+  allow $1 cache_file:dir create_dir_perms;
+  allow $1 cache_file:file create_file_perms;
+
+  allow $1 drmserver_service:service_manager find;
+  allow $1 mediaserver_service:service_manager find;
+  allow $1 nfc_service:service_manager find;
+  allow $1 radio_service:service_manager find;
+  allow $1 surfaceflinger_service:service_manager find;
+  allow $1 app_api_service:service_manager find;
+
+  # TODO: remove this once priv-apps are no longer running in untrusted_app
+  allow $1 system_api_service:service_manager find;
+
+  # TODO: remove and replace with specific package that accesses this
+  allow $1 persistent_data_block_service:service_manager find;
+
+  # Allow verifier to access staged apks.
+  allow $1 { apk_tmp_file apk_private_tmp_file }:dir r_dir_perms;
+  allow $1 { apk_tmp_file apk_private_tmp_file }:file r_file_perms;
+')
+
+#########################################
+# untrusted_app_neverallow_rules(domain)
+# Neverallow rules for untrusted app
+# modifying execute permissions
+# based on parameter
+define(`untrusted_app_neverallow_rules',`
+  # Receive or send uevent messages.
+  neverallow $1 domain:netlink_kobject_uevent_socket *;
+
+  # Receive or send generic netlink messages
+  neverallow $1 domain:netlink_socket *;
+
+  # Too much leaky information in debugfs. It's a security
+  # best practice to ensure these files aren't readable.
+  neverallow $1 debugfs:file read;
+
+  # Do not allow untrusted apps to register services.
+  # Only trusted components of Android should be registering
+  # services.
+  neverallow $1 service_manager_type:service_manager add;
+
+  # Do not allow untrusted_apps to connect to the property service
+  # or set properties. b/10243159
+  neverallow $1 property_socket:sock_file write;
+  neverallow $1 init:unix_stream_socket connectto;
+  neverallow $1 property_type:property_service set;
+
+  # Do not allow untrusted_app to be assigned mlstrustedsubject.
+  # This would undermine the per-user isolation model being
+  # enforced via levelFrom=user in seapp_contexts and the mls
+  # constraints.  As there is no direct way to specify a neverallow
+  # on attribute assignment, this relies on the fact that fork
+  # permission only makes sense within a domain (hence should
+  # never be granted to any other domain within mlstrustedsubject)
+  # and untrusted_app is allowed fork permission to itself.
+  neverallow $1 mlstrustedsubject:process fork;
+
+  # Do not allow untrusted_app to hard link to any files.
+  # In particular, if untrusted_app links to other app data
+  # files, installd will not be able to guarantee the deletion
+  # of the linked to file. Hard links also contribute to security
+  # bugs, so we want to ensure untrusted_app never has this
+  # capability.
+  neverallow $1 file_type:file link;
+
+  # Do not allow untrusted_app to access network MAC address file
+  neverallow $1 sysfs_mac_address:file no_rw_file_perms;
+')

@@ -20,25 +20,25 @@
 ### additional following rules:
 ###
 
-type untrusted_app, domain;
-app_domain(untrusted_app)
-net_domain(untrusted_app)
-bluetooth_domain(untrusted_app)
+type untrusted_app_nx, domain;
+app_domain(untrusted_app_nx)
+net_domain(untrusted_app_nx)
+bluetooth_domain(untrusted_app_nx)
 
 # Allow the allocation and use of ptys
 # Used by: https://play.google.com/store/apps/details?id=jackpal.androidterm
-create_pty(untrusted_app)
+create_pty(untrusted_app_nx)
 
-untrusted_app_allow_rules(untrusted_app)
+untrusted_app_allow_rules(untrusted_app_nx)
 
 # Allow GMS core to access perfprofd output, which is stored
 # in /data/misc/perfprofd/. GMS core will need to list all
 # data stored in that directory to process them one by one.
 userdebug_or_eng(`
-  allow untrusted_app perfprofd_data_file:file r_file_perms;
-  allow untrusted_app perfprofd_data_file:dir r_dir_perms;
+  allow untrusted_app_nx perfprofd_data_file:file r_file_perms;
+  allow untrusted_app_nx perfprofd_data_file:dir r_dir_perms;
 ')
 ###
 ### neverallow rules
 ###
-untrusted_app_neverallow_rules(untrusted_app)
+untrusted_app_neverallow_rules(untrusted_app_nx)

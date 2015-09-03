@@ -83,4 +83,18 @@ user=shared_relro domain=shared_relro
 user=shell seinfo=platform domain=shell type=shell_data_file
 user=_isolated domain=isolated_app levelFrom=user
 user=_app seinfo=platform domain=platform_app type=app_data_file levelFrom=user
+
+# Use same domain for noexecute for platform_app because platform_app is already
+# not allowed to execute app_data_file
+# (enforced by neverallow in commit 7028bdccd5b3e91928d345990587738212973f1d)
+user=_app seinfo=platform_nx domain=platform_app type=app_data_file levelFrom=user
+
+# Use same domain for noexecute for system_app because system_app is already
+# not allowed to execute app_data_file
+# (enforced by neverallow in commit 7028bdccd5b3e91928d345990587738212973f1d)
+user=system seinfo=platform_nx domain=system_app type=system_app_data_file
+
+# The app's seinfo begins with "default" if there were no matches in mac_permissions.xml.
+user=_app seinfo=default_nx domain=untrusted_app_nx type=app_data_file levelFrom=user
+
 user=_app domain=untrusted_app type=app_data_file levelFrom=user
